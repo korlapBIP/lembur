@@ -1,4 +1,4 @@
-const CACHE_NAME = "lembur-v12-firebase-no-confirm";
+const CACHE_NAME = "lembur-v13-admin-login-role";
 const urlsToCache = [
   "./",
   "./index.html",
