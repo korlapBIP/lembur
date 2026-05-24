@@ -1,19 +1,5 @@
-// Konfigurasi Firebase untuk PWA Laporan Lembur BiP.
-//
-// Cara pakai:
-// 1. Buat project Firebase gratis di https://console.firebase.google.com/
-// 2. Aktifkan Firestore Database.
-// 3. Aktifkan Authentication > Sign-in method > Anonymous.
-// 4. Buat Web App, lalu salin firebaseConfig ke bawah.
-// 5. Ubah enabled menjadi true.
-// 6. Terapkan rules dari file firestore.rules.
-//
-// Catatan keamanan:
-// - firebaseConfig bukan password/secret, tetapi tetap jangan tulis data sensitif di aplikasi publik.
-// - Rules Firestore wajib dipasang agar database tidak terbuka bebas.
-
 export const firebaseSettings = {
-  enabled: false,
+  enabled: true,
   collectionPrefix: 'lembur_bip',
   firebaseConfig: {
   apiKey: "AIzaSyAqdlJRJM-J71y3dvzU1vwa9zBJGVE3U0U",
