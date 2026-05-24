@@ -1,7 +1,7 @@
 import { firebaseSettings } from './firebase-config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
 function isPlaceholderConfig(config){
   if(!config) return true;
@@ -100,6 +100,14 @@ export function createLemburDatabase(){
       const ref = collection(state.db, state.collectionPrefix, 'reports', 'items');
       await addDoc(ref, safeReport);
       return true;
+    },
+
+    async loadReportsByDate(tanggal){
+      if(!state.enabled) return [];
+      const ref = collection(state.db, state.collectionPrefix, 'reports', 'items');
+      const q = query(ref, where('tanggal', '==', String(tanggal || '')));
+      const snap = await getDocs(q);
+      return snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
     }
   };
 }

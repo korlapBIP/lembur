@@ -52,6 +52,21 @@
       #workerTable .worker-control{display:grid;grid-template-columns:1fr 1fr;gap:8px;justify-content:stretch}
       #workerTable .worker-control .btn{width:100%;min-height:42px;padding:10px 12px}
     }
+
+    /* Admin tabs & laporan absensi */
+    .worker-only{display:none!important}.role-worker .worker-only{display:inline-flex!important}.role-admin .worker-only{display:none!important}
+    .admin-tabs{display:none;gap:10px;flex-wrap:wrap;margin:-6px 0 16px;align-items:center;background:#fff;border:1px solid rgba(188,202,221,.8);border-radius:20px;padding:10px;box-shadow:0 10px 26px rgba(20,38,72,.07)}
+    .role-admin .admin-tabs{display:flex}.admin-tab-btn{border:1px solid var(--line);background:#f6f9ff;color:#334155;border-radius:999px;padding:10px 16px;font-size:13px;font-weight:900;cursor:pointer}
+    .admin-tab-btn.active{background:linear-gradient(180deg,var(--primary),var(--primary-2));border-color:transparent;color:#fff;box-shadow:0 10px 18px rgba(37,88,217,.18)}
+    .role-admin.absensi-active #mainWorkspace{display:none}.admin-absensi-frame{display:none}.role-admin.absensi-active .admin-absensi-frame{display:block}
+    .absensi-filter{display:grid;grid-template-columns:minmax(180px,260px) auto 1fr;gap:12px;align-items:end}.absensi-status{font-size:12px;font-weight:900;color:#64748b;line-height:1.5}
+    .absensi-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}.absensi-summary .stat{background:#f8fbff;border:1px solid #dde8fb}
+    .attendance-list{display:flex;flex-direction:column;gap:12px;margin-top:12px}.attendance-card{background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 10px 24px rgba(20,38,72,.07);overflow:hidden}
+    .attendance-card-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 16px;background:linear-gradient(180deg,#f8fbff,#f2f7ff);border-bottom:1px solid var(--line)}
+    .attendance-title{font-weight:900;color:#20355b}.attendance-meta{font-size:12px;color:#64748b;font-weight:800;line-height:1.55}.attendance-wage{font-weight:900;color:#15803d}.attendance-body{padding:14px 16px}
+    .attendance-info{display:grid;grid-template-columns:140px 1fr;gap:8px 12px;font-size:13px;line-height:1.45;margin-bottom:12px}.attendance-info b{color:#334155}.attendance-workers{width:100%;border-collapse:collapse}.attendance-workers th,.attendance-workers td{border:1px solid #d7e0ec;padding:9px 8px;font-size:12px;text-align:left}.attendance-workers th{background:#eef3ff;color:#334155;font-weight:900}.attendance-workers td:first-child,.attendance-workers td:nth-child(2),.attendance-workers th:first-child,.attendance-workers th:nth-child(2){text-align:center}
+    @media(max-width:640px){.absensi-filter{grid-template-columns:1fr}.absensi-summary{grid-template-columns:1fr 1fr}.attendance-info{grid-template-columns:1fr}.attendance-card-head{flex-direction:column}.admin-tabs .admin-tab-btn{flex:1}}
+
   </style>
 
 <link rel="manifest" href="manifest.json">
@@ -128,7 +143,7 @@ if ('serviceWorker' in navigator) {
 <div class="wrap">
   <div class="mode-bar" id="modeBar" style="display:none">
     <div><div class="mode-title">Mode: <span id="modeLabel">-</span></div><div class="mode-note" id="modeNote">-</div></div>
-    <button type="button" class="btn secondary" id="btnLogout">Logout</button>
+    <div class="mode-actions"><button type="button" class="btn secondary worker-only" id="btnBackWorker">Kembali</button><button type="button" class="btn secondary" id="btnLogout">Logout</button></div>
   </div>
   <section class="hero">
     <div class="hero-brand">
@@ -155,7 +170,36 @@ if ('serviceWorker' in navigator) {
     </div>
   </section>
 
-  <main class="workspace">
+  <div class="admin-tabs admin-only" id="adminTabs" aria-label="Tab Admin">
+    <button type="button" class="admin-tab-btn active" id="tabPekerja">Pekerja & Input Lembur</button>
+    <button type="button" class="admin-tab-btn" id="tabAbsensi">Absensi</button>
+  </div>
+
+  <section class="frame admin-absensi-frame admin-only" id="adminAbsensiFrame">
+    <div class="frame-head">
+      <div><div class="frame-kicker">Admin</div><h2>Tab Absensi - Laporan Lembur Masuk</h2></div>
+      <div class="frame-number">A</div>
+    </div>
+    <section class="card">
+      <div class="card-head"><h2>Laporan Absensi Lembur</h2><span>Pilih tanggal lalu tampilkan laporan yang sudah tersimpan</span></div>
+      <div class="card-body">
+        <div class="absensi-filter">
+          <div class="field"><label for="absensiTanggal">Pilih Tanggal</label><input id="absensiTanggal" type="date"></div>
+          <button type="button" class="btn primary" id="btnTampilkanAbsensi">Tampilkan</button>
+          <div class="absensi-status" id="absensiStatus">Pilih tanggal untuk melihat laporan lembur yang sudah masuk.</div>
+        </div>
+        <div class="absensi-summary" id="absensiSummary" style="display:none">
+          <div class="stat"><div class="num" id="absensiTotalLaporan">0</div><div class="lbl">Laporan</div></div>
+          <div class="stat"><div class="num" id="absensiTotalPekerja">0</div><div class="lbl">Pekerja</div></div>
+          <div class="stat"><div class="num" id="absensiTotalJam">0</div><div class="lbl">Total Jam</div></div>
+          <div class="stat"><div class="num" id="absensiTotalUpah">Rp 0</div><div class="lbl">Total Upah</div></div>
+        </div>
+        <div class="attendance-list" id="absensiList"></div>
+      </div>
+    </section>
+  </section>
+
+  <main class="workspace" id="mainWorkspace">
     <section class="frame worker admin-only">
       <div class="frame-head">
         <div><div class="frame-kicker">Frame 1</div><h2>Kelola Data Pekerja</h2></div>
@@ -406,6 +450,8 @@ function applyRole(role){
   if(modeLabel) modeLabel.textContent=role==='admin'?'Admin':'Pekerja';
   if(modeNote) modeNote.textContent=role==='admin' ? 'Semua halaman aktif.' : '';
   if(qs('btnLogout')) qs('btnLogout').style.display=role==='admin'?'inline-flex':'none';
+  if(role==='admin') setAdminTab('pekerja');
+  if(role!=='admin') document.body.classList.remove('absensi-active');
   const firstVisible=document.querySelector(role==='worker'?'.frame.data':'.frame.worker');
   if(firstVisible) setTimeout(()=>firstVisible.scrollIntoView({behavior:'smooth',block:'start'}),120);
 }
@@ -524,10 +570,38 @@ function buildReportRecord(){
   };
 }
 
+function loadLocalReports(){
+  try{
+    const raw=localStorage.getItem('laporanLemburReports');
+    const data=raw ? JSON.parse(raw) : [];
+    return Array.isArray(data) ? data : [];
+  }catch(e){
+    return [];
+  }
+}
+
+function saveReportToLocal(record){
+  const reports=loadLocalReports();
+  const safeRecord={
+    ...record,
+    localId:'local_'+Date.now()+'_'+Math.random().toString(16).slice(2),
+    createdAtLocal:new Date().toISOString()
+  };
+  reports.unshift(safeRecord);
+  localStorage.setItem('laporanLemburReports', JSON.stringify(reports.slice(0,500)));
+  return safeRecord;
+}
+
+function localReportsByDate(dateValue){
+  return loadLocalReports().filter(r=>String(r && r.tanggal || '') === String(dateValue || ''));
+}
+
 async function saveReportToCloud(){
+  const record=buildReportRecord();
+  saveReportToLocal(record);
   try{
     if(window.LemburDB && window.LemburDB.enabled){
-      await window.LemburDB.saveReport(buildReportRecord());
+      await window.LemburDB.saveReport(record);
       showToast('Laporan tersimpan ke database.');
     }
   }catch(e){
@@ -560,11 +634,121 @@ function backupJson(){
     versi:'firebase-db-no-confirm-v3',
     exportedAt:new Date().toISOString(),
     pekerja:workers,
+    laporanTersimpan:loadLocalReports(),
     draftLaporan:buildReportRecord()
   };
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   downloadBlob(blob, `backup_lembur_bip_${new Date().toISOString().slice(0,10)}.json`);
   showToast('Backup JSON berhasil dibuat.');
+}
+
+
+function setAdminTab(tab){
+  const isAbsensi=tab === 'absensi';
+  document.body.classList.toggle('absensi-active', isAbsensi);
+  if(qs('tabPekerja')) qs('tabPekerja').classList.toggle('active', !isAbsensi);
+  if(qs('tabAbsensi')) qs('tabAbsensi').classList.toggle('active', isAbsensi);
+  if(isAbsensi){
+    const dateInput=qs('absensiTanggal');
+    if(dateInput && !dateInput.value) dateInput.value=qs('tanggal')?.value || new Date().toISOString().slice(0,10);
+    setTimeout(()=>qs('adminAbsensiFrame')?.scrollIntoView({behavior:'smooth',block:'start'}),80);
+  }else{
+    setTimeout(()=>qs('mainWorkspace')?.scrollIntoView({behavior:'smooth',block:'start'}),80);
+  }
+}
+
+function createdAtNumber(value){
+  if(!value) return 0;
+  if(typeof value === 'string') return new Date(value).getTime() || 0;
+  if(typeof value === 'number') return value;
+  if(typeof value.toDate === 'function') return value.toDate().getTime() || 0;
+  if(value.seconds) return Number(value.seconds) * 1000;
+  return 0;
+}
+
+async function loadReportsByDate(dateValue){
+  let reports=[];
+  let fromDb=false;
+  try{
+    if(window.LemburDBReady) await window.LemburDBReady;
+    if(window.LemburDB && window.LemburDB.enabled && window.LemburDB.loadReportsByDate){
+      reports=await window.LemburDB.loadReportsByDate(dateValue);
+      fromDb=true;
+    }
+  }catch(e){
+    console.warn('Gagal memuat laporan dari database:', e);
+    fromDb=false;
+  }
+  if(!fromDb){
+    reports=localReportsByDate(dateValue);
+  }
+  reports=(Array.isArray(reports)?reports:[]).filter(r=>String(r && r.tanggal || '') === String(dateValue || ''));
+  reports.sort((a,b)=>createdAtNumber(b.createdAt || b.createdAtLocal)-createdAtNumber(a.createdAt || a.createdAtLocal));
+  return {reports, fromDb};
+}
+
+function reportCreatedLabel(record){
+  const raw=record.createdAtLocal || record.createdAt;
+  let date=null;
+  if(typeof raw === 'string') date=new Date(raw);
+  else if(raw && typeof raw.toDate === 'function') date=raw.toDate();
+  else if(raw && raw.seconds) date=new Date(Number(raw.seconds)*1000);
+  if(!date || Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString('id-ID',{dateStyle:'short',timeStyle:'short'});
+}
+
+function renderAbsensiReports(reports, fromDb){
+  const list=qs('absensiList');
+  const summary=qs('absensiSummary');
+  const status=qs('absensiStatus');
+  if(!list || !summary || !status) return;
+  const totalLaporan=reports.length;
+  const totalPekerja=reports.reduce((sum,r)=>sum+(Array.isArray(r.pekerja)?r.pekerja.length:0),0);
+  const totalJam=reports.reduce((sum,r)=>sum+(Number(r.durasiJam)||0)*(Array.isArray(r.pekerja)?r.pekerja.length:0),0);
+  const totalUpah=reports.reduce((sum,r)=>sum+(Number(r.totalUpah)||0),0);
+  qs('absensiTotalLaporan').textContent=String(totalLaporan);
+  qs('absensiTotalPekerja').textContent=String(totalPekerja);
+  qs('absensiTotalJam').textContent=totalJam.toLocaleString('id-ID',{maximumFractionDigits:2});
+  qs('absensiTotalUpah').textContent=formatRupiah(totalUpah);
+  summary.style.display='grid';
+  status.textContent=fromDb ? 'Data ditampilkan dari Firebase Firestore.' : 'Data ditampilkan dari penyimpanan lokal perangkat ini.';
+  if(!reports.length){
+    list.innerHTML='<div class="empty">Belum ada laporan lembur masuk pada tanggal ini.</div>';
+    return;
+  }
+  list.innerHTML=reports.map((r,idx)=>{
+    const pekerja=Array.isArray(r.pekerja)?r.pekerja:[];
+    const rows=pekerja.length ? pekerja.map((w,i)=>`<tr><td>${i+1}</td><td>${escapeHTML(w.no || '-')}</td><td>${escapeHTML(w.nama || '-')}</td><td>${escapeHTML(formatRupiah(r.upahPerPekerja || 0))}</td></tr>`).join('') : '<tr><td colspan="4" class="empty">Tidak ada detail pekerja.</td></tr>';
+    return `<article class="attendance-card">
+      <div class="attendance-card-head">
+        <div><div class="attendance-title">Laporan ${idx+1} - ${escapeHTML(formatDateID(r.tanggal || ''))}</div><div class="attendance-meta">Masuk: ${escapeHTML(reportCreatedLabel(r))}</div></div>
+        <div class="attendance-wage">${escapeHTML(formatRupiah(r.totalUpah || 0))}</div>
+      </div>
+      <div class="attendance-body">
+        <div class="attendance-info">
+          <b>Jam</b><span>${escapeHTML(r.jamAwal || '-')} s.d ${escapeHTML(r.jamAkhir || '-')}</span>
+          <b>Istirahat</b><span>${escapeHTML(String(r.istirahatMenit ?? 0))} Menit</span>
+          <b>Durasi</b><span>${escapeHTML(formatDuration(r.durasiJam || 0))}</span>
+          <b>Kegiatan</b><span>${escapeHTML(r.kegiatan || '-')}</span>
+        </div>
+        <table class="attendance-workers"><thead><tr><th>No</th><th>No Absen</th><th>Nama Pekerja</th><th>Upah</th></tr></thead><tbody>${rows}</tbody></table>
+      </div>
+    </article>`;
+  }).join('');
+}
+
+async function tampilkanAbsensi(){
+  const input=qs('absensiTanggal');
+  const status=qs('absensiStatus');
+  const list=qs('absensiList');
+  if(!input || !input.value){
+    showToast('Pilih tanggal absensi terlebih dahulu.');
+    return;
+  }
+  if(status) status.textContent='Memuat laporan...';
+  if(list) list.innerHTML='';
+  const {reports, fromDb}=await loadReportsByDate(input.value);
+  renderAbsensiReports(reports, fromDb);
 }
 
 function showToast(msg){
@@ -1223,6 +1407,10 @@ async function initApp(){
   qs('btnLoginAdmin').onclick=loginAdmin;
   qs('btnLoginWorker').onclick=loginWorker;
   qs('btnLogout').onclick=logoutRole;
+  if(qs('btnBackWorker')) qs('btnBackWorker').onclick=logoutRole;
+  if(qs('tabPekerja')) qs('tabPekerja').onclick=()=>setAdminTab('pekerja');
+  if(qs('tabAbsensi')) qs('tabAbsensi').onclick=()=>setAdminTab('absensi');
+  if(qs('btnTampilkanAbsensi')) qs('btnTampilkanAbsensi').onclick=tampilkanAbsensi;
   qs('adminPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') loginAdmin(); });
   applyRole(currentRole);
 
