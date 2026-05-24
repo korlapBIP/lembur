@@ -1,4 +1,4 @@
-const CACHE_NAME = "lembur-v11-firebase-db";
+const CACHE_NAME = "lembur-v12-firebase-no-confirm";
 const urlsToCache = [
   "./",
   "./index.html",

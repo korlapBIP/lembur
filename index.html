@@ -304,13 +304,14 @@ async function initDatabaseLayer(){
     setDbStatus('Firebase Firestore aktif','ok','Data pekerja dan laporan akan disinkronkan ke database.');
     const cloudWorkers=await window.LemburDB.loadWorkers();
     if(Array.isArray(cloudWorkers) && cloudWorkers.length){
-      const useCloud = !localStorage.getItem('laporanLemburWorkers') || confirm('Database Firebase sudah memiliki data pekerja. Gunakan data dari database?');
-      if(useCloud){
-        workers=cloudWorkers.map(w=>({no:String(w.no),nama:String(w.nama),selected:!!w.selected}));
-        localStorage.setItem('laporanLemburWorkers',JSON.stringify(workers));
-      }
+      // Firebase menjadi sumber data utama saat tersedia.
+      // Tidak lagi menampilkan popup konfirmasi setiap aplikasi dibuka.
+      workers=cloudWorkers.map(w=>({no:String(w.no),nama:String(w.nama),selected:!!w.selected}));
+      localStorage.setItem('laporanLemburWorkers',JSON.stringify(workers));
+      setDbStatus('Firebase Firestore aktif','ok','Data pekerja otomatis dimuat dari database.');
     }else{
       await window.LemburDB.saveWorkers(workers);
+      setDbStatus('Firebase Firestore aktif','ok','Database kosong, data pekerja lokal dikirim ke Firestore.');
     }
   }catch(e){
     console.warn('Database init gagal:', e);
@@ -382,7 +383,7 @@ async function manualSyncCloud(){
 function backupJson(){
   const payload={
     aplikasi:'pwa_lembur_bip',
-    versi:'firebase-db-safe-v1',
+    versi:'firebase-db-no-confirm-v3',
     exportedAt:new Date().toISOString(),
     pekerja:workers,
     draftLaporan:buildReportRecord()
