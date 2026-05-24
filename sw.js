@@ -1,4 +1,4 @@
-const CACHE_NAME = "lembur-v13-admin-login-role";
+const CACHE_NAME = "lembur-v14-admin-password-db";
 const urlsToCache = [
   "./",
   "./index.html",

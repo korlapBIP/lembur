@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-  <title>Laporan Lembur Unit Cleaning Umum</title>
+  <title>Aplikasi Lembur BIP</title>
   <style>
     :root{
       --bg:#eef3f9;--panel:#ffffff;--ink:#172033;--muted:#65758b;--line:#d9e3f1;--line-strong:#bdcbe0;
@@ -113,10 +113,8 @@ if ('serviceWorker' in navigator) {
   <div class="login-card">
     <div class="login-brand">
       <img src="icons/icon-512.png" alt="Logo aplikasi" class="login-logo">
-      <div><small>Login Aplikasi</small><strong>Laporan Lembur Unit Cleaning Umum</strong></div>
+      <div><small>Login Aplikasi</small><strong>Aplikasi Lembur BIP</strong></div>
     </div>
-    <h2>Pilih Akses</h2>
-    <p>Admin dapat membuka semua halaman dan mengelola data pekerja. Pekerja hanya membuka input lembur, daftar pekerja lembur, dan form laporan.</p>
     <div class="login-field">
       <label for="adminPassword">Password Admin</label>
       <input id="adminPassword" type="password" autocomplete="current-password" placeholder="Masukkan password admin">
@@ -125,23 +123,20 @@ if ('serviceWorker' in navigator) {
       <button type="button" class="btn primary" id="btnLoginAdmin">Login Admin</button>
       <button type="button" class="btn secondary" id="btnLoginWorker">Masuk Halaman Pekerja</button>
     </div>
-    <div class="login-help">Masuk sebagai pekerja tidak membutuhkan password. Hubungi admin untuk akses pengelolaan data pekerja.</div>
   </div>
 </div>
 <div class="wrap">
   <div class="mode-bar" id="modeBar" style="display:none">
     <div><div class="mode-title">Mode: <span id="modeLabel">-</span></div><div class="mode-note" id="modeNote">-</div></div>
-    <button type="button" class="btn secondary" id="btnLogout">Ganti Login</button>
+    <button type="button" class="btn secondary" id="btnLogout">Logout</button>
   </div>
   <section class="hero">
     <div class="hero-brand">
       <img src="icons/icon-512.png" alt="Logo aplikasi" class="hero-logo">
       <div class="hero-brand-text">
-        <strong>Laporan Lembur Unit Cleaning Umum</strong>
+        <strong>Aplikasi Lembur BIP</strong>
       </div>
     </div>
-    <h1>Laporan Lembur Unit Cleaning Umum</h1>
-    
     <div class="hero-badges">
       <div class="badge worker-hidden">1–2 Kelola Pekerja</div>
       <div class="badge">3–4 Input Lembur</div>
@@ -197,6 +192,20 @@ if ('serviceWorker' in navigator) {
           </div>
         </section>
       </div>
+      <section class="card admin-password-card admin-only">
+        <div class="card-head"><h2>Ubah Password Admin</h2><span>Password tersimpan di database</span></div>
+        <div class="card-body">
+          <div class="field-grid">
+            <div class="field"><label for="oldAdminPassword">Password Lama</label><input id="oldAdminPassword" type="password" autocomplete="current-password" placeholder="Password lama"></div>
+            <div class="field"><label for="newAdminPassword">Password Baru</label><input id="newAdminPassword" type="password" autocomplete="new-password" placeholder="Minimal 4 karakter"></div>
+            <div class="field"><label for="confirmAdminPassword">Ulangi Password Baru</label><input id="confirmAdminPassword" type="password" autocomplete="new-password" placeholder="Ulangi password baru"></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn primary" id="btnChangeAdminPassword">Simpan Password Baru</button>
+          </div>
+          <div class="login-help" id="adminPasswordStatus">Password admin siap digunakan.</div>
+        </div>
+      </section>
     </section>
 
     <section class="frame data">
@@ -285,8 +294,104 @@ const appLogo=new Image();
 appLogo.src='icons/icon-512.png';
 let deferredInstallPrompt=null;
 let installSheetDismissed=false;
-const ADMIN_PASSWORD='admin123';
+const DEFAULT_ADMIN_PASSWORD='admin123';
+let adminPasswordHash=localStorage.getItem('laporanLemburAdminPasswordHash') || '';
 let currentRole=localStorage.getItem('laporanLemburRole') || '';
+
+
+async function hashPassword(text){
+  const value=String(text || '');
+  if(window.crypto && crypto.subtle && window.TextEncoder){
+    const data=new TextEncoder().encode(value);
+    const hash=await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  // Fallback untuk browser lama. Tetap hanya menyimpan bentuk hash, bukan teks password asli.
+  let h=0;
+  for(let i=0;i<value.length;i++) h=((h<<5)-h)+value.charCodeAt(i) | 0;
+  return 'legacy-'+Math.abs(h).toString(16);
+}
+
+function setPasswordStatus(text){
+  const el=qs('adminPasswordStatus');
+  if(el) el.textContent=text;
+}
+
+async function saveAdminPasswordHashToDatabase(){
+  try{
+    localStorage.setItem('laporanLemburAdminPasswordHash', adminPasswordHash);
+    if(window.LemburDB && window.LemburDB.enabled && window.LemburDB.saveAdminSettings){
+      await window.LemburDB.saveAdminSettings({ passwordHash: adminPasswordHash });
+      setPasswordStatus('Password admin tersimpan di database Firestore.');
+    }else{
+      setPasswordStatus('Password admin tersimpan di penyimpanan lokal. Aktifkan Firebase agar tersimpan di database Firestore.');
+    }
+  }catch(e){
+    console.warn('Gagal simpan password admin:', e);
+    setPasswordStatus('Password tersimpan lokal, tetapi gagal sinkron ke database.');
+  }
+}
+
+async function initAdminPassword(){
+  try{
+    if(window.LemburDB && window.LemburDB.enabled && window.LemburDB.loadAdminSettings){
+      const settings=await window.LemburDB.loadAdminSettings();
+      if(settings && settings.passwordHash){
+        adminPasswordHash=String(settings.passwordHash);
+        localStorage.setItem('laporanLemburAdminPasswordHash', adminPasswordHash);
+        setPasswordStatus('Password admin dimuat dari database Firestore.');
+        return;
+      }
+    }
+    if(!adminPasswordHash){
+      adminPasswordHash=await hashPassword(DEFAULT_ADMIN_PASSWORD);
+      await saveAdminPasswordHashToDatabase();
+    }else{
+      await saveAdminPasswordHashToDatabase();
+    }
+  }catch(e){
+    console.warn('Gagal inisialisasi password admin:', e);
+    if(!adminPasswordHash){
+      adminPasswordHash=await hashPassword(DEFAULT_ADMIN_PASSWORD);
+      localStorage.setItem('laporanLemburAdminPasswordHash', adminPasswordHash);
+    }
+    setPasswordStatus('Password admin memakai penyimpanan lokal karena database belum siap.');
+  }
+}
+
+async function verifyAdminPassword(password){
+  const hash=await hashPassword(password);
+  return hash === adminPasswordHash;
+}
+
+async function changeAdminPassword(){
+  const oldPass=(qs('oldAdminPassword')?.value || '').trim();
+  const newPass=(qs('newAdminPassword')?.value || '').trim();
+  const confirmPass=(qs('confirmAdminPassword')?.value || '').trim();
+  if(!oldPass || !newPass || !confirmPass){
+    showToast('Lengkapi password lama dan password baru.');
+    return;
+  }
+  if(!(await verifyAdminPassword(oldPass))){
+    showToast('Password lama salah.');
+    qs('oldAdminPassword')?.focus();
+    return;
+  }
+  if(newPass.length < 4){
+    showToast('Password baru minimal 4 karakter.');
+    qs('newAdminPassword')?.focus();
+    return;
+  }
+  if(newPass !== confirmPass){
+    showToast('Konfirmasi password baru tidak sama.');
+    qs('confirmAdminPassword')?.focus();
+    return;
+  }
+  adminPasswordHash=await hashPassword(newPass);
+  await saveAdminPasswordHashToDatabase();
+  ['oldAdminPassword','newAdminPassword','confirmAdminPassword','adminPassword'].forEach(id=>{ if(qs(id)) qs(id).value=''; });
+  showToast('Password admin berhasil diubah.');
+}
 
 function applyRole(role){
   currentRole=role;
@@ -299,16 +404,15 @@ function applyRole(role){
   if(login) login.classList.toggle('hide', role==='admin' || role==='worker');
   if(modeBar) modeBar.style.display=(role==='admin' || role==='worker')?'flex':'none';
   if(modeLabel) modeLabel.textContent=role==='admin'?'Admin':'Pekerja';
-  if(modeNote) modeNote.textContent=role==='admin'
-    ? 'Semua halaman aktif, termasuk kelola pekerja dan database.'
-    : 'Halaman pekerja hanya menampilkan input lembur, daftar pekerja lembur, dan form laporan.';
+  if(modeNote) modeNote.textContent=role==='admin' ? 'Semua halaman aktif.' : '';
+  if(qs('btnLogout')) qs('btnLogout').style.display=role==='admin'?'inline-flex':'none';
   const firstVisible=document.querySelector(role==='worker'?'.frame.data':'.frame.worker');
   if(firstVisible) setTimeout(()=>firstVisible.scrollIntoView({behavior:'smooth',block:'start'}),120);
 }
 
-function loginAdmin(){
+async function loginAdmin(){
   const pass=(qs('adminPassword')?.value || '').trim();
-  if(pass !== ADMIN_PASSWORD){
+  if(!(await verifyAdminPassword(pass))){
     showToast('Password admin salah.');
     qs('adminPassword')?.focus();
     return;
@@ -1098,6 +1202,7 @@ function hideSplash(){
 
 async function initApp(){
   await initDatabaseLayer();
+  await initAdminPassword();
   if(!qs('tanggal').value) setTanggalHariIni();
   installSheetDismissed=localStorage.getItem('laporanLemburHideInstallPrompt')==='1';
 
@@ -1114,6 +1219,7 @@ async function initApp(){
   qs('btnInlineInstall').onclick=triggerInstallPrompt;
   qs('btnSyncCloud').onclick=manualSyncCloud;
   qs('btnBackupJson').onclick=backupJson;
+  qs('btnChangeAdminPassword').onclick=changeAdminPassword;
   qs('btnLoginAdmin').onclick=loginAdmin;
   qs('btnLoginWorker').onclick=loginWorker;
   qs('btnLogout').onclick=logoutRole;

@@ -20,6 +20,13 @@ function cleanWorkers(workers){
     .filter(w => w.no && w.nama);
 }
 
+
+function cleanAdminSettings(settings){
+  if(!settings || typeof settings !== 'object') return {};
+  const passwordHash = String(settings.passwordHash || '').trim();
+  return passwordHash ? { passwordHash } : {};
+}
+
 export function createLemburDatabase(){
   const state = {
     enabled: false,
@@ -58,6 +65,25 @@ export function createLemburDatabase(){
       const ref = doc(state.db, state.collectionPrefix, 'workers');
       await setDoc(ref, {
         items: cleanWorkers(workers),
+        updatedAt: serverTimestamp(),
+        updatedBy: state.auth.currentUser ? state.auth.currentUser.uid : null
+      }, { merge:true });
+      return true;
+    },
+
+    async loadAdminSettings(){
+      if(!state.enabled) return null;
+      const ref = doc(state.db, state.collectionPrefix, 'admin_settings');
+      const snap = await getDoc(ref);
+      if(!snap.exists()) return null;
+      return cleanAdminSettings(snap.data() || {});
+    },
+
+    async saveAdminSettings(settings){
+      if(!state.enabled) return false;
+      const ref = doc(state.db, state.collectionPrefix, 'admin_settings');
+      await setDoc(ref, {
+        ...cleanAdminSettings(settings),
         updatedAt: serverTimestamp(),
         updatedBy: state.auth.currentUser ? state.auth.currentUser.uid : null
       }, { merge:true });
